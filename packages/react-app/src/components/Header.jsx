@@ -1,16 +1,15 @@
-import { PageHeader } from "antd";
 import React from "react";
-
-// displays a page header
+import { PageHeader } from "antd";
 
 export default function Header() {
   return (
-    <a href="https://github.com/austintgriffith/scaffold-eth" target="_blank" rel="noopener noreferrer">
+    <div className="Header">
       <PageHeader
-        title="🏗 scaffold-eth"
-        subTitle="forkable Ethereum dev stack focused on fast product iteration"
-        style={{ cursor: "pointer" }}
+        title={
+          <a href="/" target="_blank" rel="noopener noreferrer">Pinyottas</a>
+        }
+        subTitle='Generative art NFTs loaded up with ERC-20 tokens'
       />
-    </a>
+    </div>
   );
 }

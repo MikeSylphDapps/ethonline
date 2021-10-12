@@ -6,11 +6,6 @@ import tryToDisplay from "./utils";
 
 const { utils, BigNumber } = require("ethers");
 
-const getFunctionInputKey = (functionInfo, input, inputIndex) => {
-  const name = input?.name ? input.name : "input_" + inputIndex + "_";
-  return functionInfo.name + "_" + name + "_" + input.type;
-};
-
 export default function FunctionForm({ contractFunction, functionInfo, provider, gasPrice, triggerRefresh }) {
   const [form, setForm] = useState({});
   const [txValue, setTxValue] = useState();
@@ -18,8 +13,9 @@ export default function FunctionForm({ contractFunction, functionInfo, provider,
 
   const tx = Transactor(provider, gasPrice);
 
-  const inputs = functionInfo.inputs.map((input, inputIndex) => {
-    const key = getFunctionInputKey(functionInfo, input, inputIndex);
+  let inputIndex = 0;
+  const inputs = functionInfo.inputs.map(input => {
+    const key = functionInfo.name + "_" + input.name + "_" + input.type + "_" + inputIndex++;
 
     let buttons = "";
     if (input.type === "bytes32") {
@@ -178,8 +174,9 @@ export default function FunctionForm({ contractFunction, functionInfo, provider,
             style={{ width: 50, height: 30, margin: 0 }}
             type="default"
             onClick={async () => {
-              const args = functionInfo.inputs.map((input, inputIndex) => {
-                const key = getFunctionInputKey(functionInfo, input, inputIndex);
+              let innerIndex = 0;
+              const args = functionInfo.inputs.map(input => {
+                const key = functionInfo.name + "_" + input.name + "_" + input.type + "_" + innerIndex++;
                 let value = form[key];
                 if (input.baseType === "array") {
                   value = JSON.parse(value);
@@ -195,12 +192,8 @@ export default function FunctionForm({ contractFunction, functionInfo, provider,
 
               let result;
               if (functionInfo.stateMutability === "view" || functionInfo.stateMutability === "pure") {
-                try {
-                  const returned = await contractFunction(...args);
-                  result = tryToDisplay(returned);
-                } catch (err) {
-                  console.error(err);
-                }
+                const returned = await contractFunction(...args);
+                result = tryToDisplay(returned);
               } else {
                 const overrides = {};
                 if (txValue) {

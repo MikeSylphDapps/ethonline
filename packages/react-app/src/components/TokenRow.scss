@@ -1,0 +1,99 @@
+.TokenRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 5px 5px 10px 5px;
+  height: 66px;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #ddd;
+  }
+
+  &:nth-child(even) {
+    background-color: #f5f5f5;
+  }
+
+  .wrap {
+    display: flex;
+    justify-content: center;
+
+    &.approved {
+      align-items: flex-end;
+    }
+    &.unapproved {
+      align-items: center;
+    }
+    
+
+    > :not(:last-child) {
+      margin-right: 15px;
+    }
+  }
+
+  .symbol {
+    width: 100px;
+    text-align: right;
+    font-weight: bold;
+  }
+
+  .col {
+    display: flex;
+    align-items: flex-end;
+  }
+  .col-1 {
+    width: 100px;
+  }
+  .col-2 {
+    width: 220px;
+    justify-content: center;
+  }
+  .col-3 {
+    width: 130px;
+  }
+
+  .balance {
+    display: flex;
+    width: 100%;
+
+    > :not(:last-child) {
+      margin-right: 5px;
+    }
+    
+    .value {
+      width: 50%;
+      overflow: hidden;
+      text-align: right;
+    }
+  }
+
+  .unapproved {
+    width: 100%;
+    
+    .balance {
+      justify-content: center;
+    }
+  }
+
+  .approved {
+    width: 100%;
+
+    .balance {
+      .label {
+        width: 100%;
+        text-align: left;
+      }
+    }
+
+    input {
+      width: 100%;
+
+      &.validation-failed {
+        border: 2px solid red;
+      }
+    }
+  }
+
+  button {
+    //width: 80px;
+  }
+}

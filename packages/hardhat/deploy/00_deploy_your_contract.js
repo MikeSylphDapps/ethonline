@@ -1,25 +1,104 @@
 // deploy/00_deploy_your_contract.js
 
-//const { ethers } = require("hardhat");
+//const { ethers } = require("ethers");
+
+const { TOKENS } = require("../../react-app/src/utils/tokens");
+console.log(TOKENS);
+
+const { ethers } = require("hardhat");
+
+const MINT_FEE = ethers.utils.parseEther("0.08");
+const ALLOWANCE = ethers.BigNumber.from(2).pow(256).sub(1);
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  await deploy("YourContract", {
-    // Learn more about args here: https://www.npmjs.com/package/hardhat-deploy#deploymentsdeploy
+
+  // Dev config
+  // ----------
+  const addressesForWhitelist = [];
+  for(let i = 0; i < TOKENS.length; i++) {
+    const token = TOKENS[i];
+    const desiredERC20Balance = ethers.BigNumber.from("10000").mul((ethers.BigNumber.from(10).pow(token.decimals)));
+    const e20args = {
+      args: [desiredERC20Balance],
+      from: deployer,
+      log: true,
+    };
+
+    await deploy(token.name, e20args);
+    const tokenContract = await ethers.getContract(token.name, deployer);
+    addressesForWhitelist.push(tokenContract.address);
+  }
+
+  await deploy("Pinyottas", {
     from: deployer,
-    //args: [ "Hello", ethers.utils.parseEther("1.5") ],
+    log: true,
+  });
+  await deploy("BaseURIMetadataProvider", {
+    from: deployer,
+    args: ["http://localhost:3001/tokens/metadata/"],
     log: true,
   });
 
+  // Link Pinyottas to BaseURIMetadataProvider
+  const baseURIMetadataProvider = await ethers.getContract("BaseURIMetadataProvider", deployer);
+  const pinyottas = await ethers.getContract("Pinyottas", deployer);
+  await pinyottas.setMetadataProvider(baseURIMetadataProvider.address);
+
+  // Add the ERC20s to the whitelist
+  await pinyottas.addContractsToWhitelist(addressesForWhitelist);
+
+  // Approve Pinyottas on all the ERC20s
+  for(let i = 0; i < TOKENS.length; i++) {
+    const token = TOKENS[i];
+    const tokenContract = await ethers.getContract(token.name, deployer);
+    await tokenContract.approve(pinyottas.address, ALLOWANCE);
+  }
+
+  // Rinkeby config
+  // --------------
+  /*
+  const addressesForWhitelist = [];
+  for(let i = 0; i < TOKENS.length; i++) {
+    const token = TOKENS[i];
+    const desiredERC20Balance = ethers.BigNumber.from("10000").mul((ethers.BigNumber.from(10).pow(token.decimals)));
+    const e20args = {
+      args: [desiredERC20Balance],
+      from: deployer,
+      log: true,
+    };
+
+    await deploy(token.name, e20args);
+    const tokenContract = await ethers.getContract(token.name, deployer);
+    addressesForWhitelist.push(tokenContract.address);
+  }
+
+  await deploy("Pinyottas", {
+    from: deployer,
+    log: true,
+  });
+  await deploy("BaseURIMetadataProvider", {
+    from: deployer,
+    args: ["http://localhost:3001/tokens/metadata/"],
+    log: true,
+  });
+
+  // Link Pinyottas to BaseURIMetadataProvider
+  const baseURIMetadataProvider = await ethers.getContract("BaseURIMetadataProvider", deployer);
+  const pinyottas = await ethers.getContract("Pinyottas", deployer);
+  await pinyottas.setMetadataProvider(baseURIMetadataProvider.address);
+
+  // Add the ERC20s to the whitelist
+  await pinyottas.addContractsToWhitelist(addressesForWhitelist);
+  */
+  
+  // Scaffold-eth examples:
+  // --------------------------
   /*
     // Getting a previously deployed contract
     const YourContract = await ethers.getContract("YourContract", deployer);
     await YourContract.setPurpose("Hello");
-  
-    To take ownership of yourContract using the ownable library uncomment next line and add the 
-    address you want to be the owner. 
-    // yourContract.transferOwnership(YOUR_ADDRESS_HERE);
 
     //const yourContract = await ethers.getContractAt('YourContract', "0xaAC799eC2d00C013f1F11c37E654e59B0429DF6A") //<-- if you want to instantiate a version of a contract at a specific address!
   */

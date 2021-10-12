@@ -30,8 +30,8 @@ export default function Transactor(providerOrSigner, gasPrice, etherscan) {
 
       console.log("network", network);
 
-      let options = null;
-      let notify = null;
+      var options = null;
+      var notify = null;
       if (navigator.onLine) {
         options = {
           dappId: BLOCKNATIVE_DAPPID, // GET YOUR OWN KEY AT https://account.blocknative.com

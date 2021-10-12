@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useBalance } from "eth-hooks";
+import { useBalance } from "../hooks";
 
 const { utils } = require("ethers");
 
@@ -58,7 +58,7 @@ export default function Balance(props) {
   const price = props.price || props.dollarMultiplier;
 
   if (price && dollarMode) {
-    displayBalance = "$" + (floatBalance * price).toFixed(2);
+    displayBalance = "$" + (floatBalance * price).toLocaleString();
   }
 
   return (

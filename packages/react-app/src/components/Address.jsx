@@ -2,7 +2,7 @@ import { Skeleton, Typography } from "antd";
 import React from "react";
 import Blockies from "react-blockies";
 import { useThemeSwitcher } from "react-css-theme-switcher";
-import { useLookupAddress } from "eth-hooks/dapps/ens";
+import { useLookupAddress } from "../hooks";
 
 // changed value={address} to address={address}
 
@@ -51,10 +51,7 @@ export default function Address(props) {
 
   let displayAddress = address.substr(0, 6);
 
-  const ensSplit = ens && ens.split(".");
-  const validEnsCheck = ensSplit && ensSplit[ensSplit.length - 1] === "eth";
-
-  if (validEnsCheck) {
+  if (ens && ens.indexOf("0x") < 0) {
     displayAddress = ens;
   } else if (props.size === "short") {
     displayAddress += "..." + address.substr(-4);
@@ -109,10 +106,10 @@ export default function Address(props) {
 
   return (
     <span>
-      <span style={{ verticalAlign: "middle" }}>
+      {/*<span style={{ verticalAlign: "middle" }}>
         <Blockies seed={address.toLowerCase()} size={8} scale={props.fontSize ? props.fontSize / 7 : 4} />
-      </span>
-      <span style={{ verticalAlign: "middle", paddingLeft: 5, fontSize: props.fontSize ? props.fontSize : 28 }}>
+  </span>*/}
+      <span style={{ verticalAlign: "middle", paddingLeft: 5, fontSize: props.fontSize ? props.fontSize : 16 }}>
         {text}
       </span>
     </span>

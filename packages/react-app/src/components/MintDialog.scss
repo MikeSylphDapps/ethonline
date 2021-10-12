@@ -1,0 +1,41 @@
+.MintDialog {
+  .ant-card {
+    .ant-card-body{
+      padding: 10px;
+      width: 250px;
+  
+      >:not(:last-child) {
+        margin-bottom: .5em;
+      }  
+  
+      .subtitle {
+        text-decoration: underline;
+      }
+  
+      .empty-contents-message {
+        margin-bottom: 1em;
+      }
+  
+      .token-records {
+        margin-bottom: 1em;
+      }
+      .token-record {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+    
+        >:not(:last-child) {
+          margin-right: 10px;
+        }
+    
+        .label {
+          flex-grow: 1;
+        }
+    
+        .anticon.anticon-close-circle {
+          cursor: pointer;
+        }
+      }
+    }
+  }
+}

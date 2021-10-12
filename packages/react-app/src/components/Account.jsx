@@ -59,10 +59,10 @@ export default function Account({
           key="logoutbutton"
           style={{ verticalAlign: "top", marginLeft: 8, marginTop: 4 }}
           shape="round"
-          size="large"
+          size="medium"
           onClick={logoutOfWeb3Modal}
         >
-          logout
+          Disconnect
         </Button>,
       );
     } else {
@@ -71,11 +71,11 @@ export default function Account({
           key="loginbutton"
           style={{ verticalAlign: "top", marginLeft: 8, marginTop: 4 }}
           shape="round"
-          size="large"
+          size="medium"
           /* type={minimized ? "default" : "primary"}     too many people just defaulting to MM and having a bad time */
           onClick={loadWeb3Modal}
         >
-          connect
+          Connect
         </Button>,
       );
     }
@@ -89,10 +89,9 @@ export default function Account({
     <span>
       {address ? (
         <Address address={address} ensProvider={mainnetProvider} blockExplorer={blockExplorer} />
-      ) : (
-        "Connecting..."
-      )}
-      <Balance address={address} provider={localProvider} price={price} />
+      ): ''}
+      {/* <Balance address={address} provider={localProvider} price={price} /> */}
+      {/*
       <Wallet
         address={address}
         provider={localProvider}
@@ -101,11 +100,16 @@ export default function Account({
         price={price}
         color={currentTheme === "light" ? "#1890ff" : "#2caad9"}
       />
+      */}
     </span>
   );
 
   return (
-    <div>
+    <div className="Account" style={{
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'center'
+    }}>
       {display}
       {modalButtons}
     </div>

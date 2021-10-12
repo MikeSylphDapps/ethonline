@@ -1,6 +1,6 @@
 import { Card } from "antd";
 import React, { useMemo, useState } from "react";
-import { useContractExistsAtAddress, useContractLoader } from "eth-hooks";
+import { useContractExistsAtAddress, useContractLoader } from "../../hooks";
 import Account from "../Account";
 import DisplayVariable from "./DisplayVariable";
 import FunctionForm from "./FunctionForm";
@@ -54,9 +54,8 @@ export default function Contract({
   price,
   blockExplorer,
   chainId,
-  contractConfig,
 }) {
-  const contracts = useContractLoader(provider, contractConfig, chainId);
+  const contracts = useContractLoader(provider, { chainId });
   let contract;
   if (!customContract) {
     contract = contracts ? contracts[name] : "";
@@ -67,49 +66,45 @@ export default function Contract({
   const address = contract ? contract.address : "";
   const contractIsDeployed = useContractExistsAtAddress(provider, address);
 
-  const displayedContractFunctions = useMemo(() => {
-    const results = contract
-      ? Object.values(contract.interface.functions).filter(
-          fn => fn.type === "function" && !(show && show.indexOf(fn.name) < 0),
-        )
-      : [];
-    return results;
-  }, [contract, show]);
+  const displayedContractFunctions = useMemo(
+    () =>
+      contract
+        ? Object.values(contract.interface.functions).filter(
+            fn => fn.type === "function" && !(show && show.indexOf(fn.name) < 0),
+          )
+        : [],
+    [contract, show],
+  );
 
   const [refreshRequired, triggerRefresh] = useState(false);
-  const contractDisplay = displayedContractFunctions.map(contractFuncInfo => {
-    const contractFunc =
-      contractFuncInfo.stateMutability === "view" || contractFuncInfo.stateMutability === "pure"
-        ? contract[contractFuncInfo.name]
-        : contract.connect(signer)[contractFuncInfo.name];
-
-    if (typeof contractFunc === "function") {
-      if (isQueryable(contractFuncInfo)) {
-        // If there are no inputs, just display return value
-        return (
-          <DisplayVariable
-            key={contractFuncInfo.name}
-            contractFunction={contractFunc}
-            functionInfo={contractFuncInfo}
-            refreshRequired={refreshRequired}
-            triggerRefresh={triggerRefresh}
-          />
-        );
-      }
-
-      // If there are inputs, display a form to allow users to provide these
+  const contractDisplay = displayedContractFunctions.map((fn, i) => {
+    if (isQueryable(fn)) {
+      // If there are no inputs, just display return value
       return (
-        <FunctionForm
-          key={"FF" + contractFuncInfo.name}
-          contractFunction={contractFunc}
-          functionInfo={contractFuncInfo}
-          provider={provider}
-          gasPrice={gasPrice}
+        <DisplayVariable
+          key={fn.name}
+          contractFunction={contract[fn.name]}
+          functionInfo={fn}
+          refreshRequired={refreshRequired}
           triggerRefresh={triggerRefresh}
         />
       );
     }
-    return null;
+    // If there are inputs, display a form to allow users to provide these
+    return (
+      <FunctionForm
+        key={"FF" + fn.name + '-' + i}
+        contractFunction={
+          fn.stateMutability === "view" || fn.stateMutability === "pure"
+            ? contract[fn.name]
+            : contract.connect(signer)[fn.name]
+        }
+        functionInfo={fn}
+        provider={provider}
+        gasPrice={gasPrice}
+        triggerRefresh={triggerRefresh}
+      />
+    );
   });
 
   return (

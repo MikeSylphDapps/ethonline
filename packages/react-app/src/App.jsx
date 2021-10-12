@@ -1,32 +1,38 @@
 import WalletConnectProvider from "@walletconnect/web3-provider";
-//import Torus from "@toruslabs/torus-embed"
 import WalletLink from "walletlink";
-import { Alert, Button, Col, Menu, Row } from "antd";
-import "antd/dist/antd.css";
+import { Menu } from "antd";
 import React, { useCallback, useEffect, useState } from "react";
-import { BrowserRouter, Link, Route, Switch } from "react-router-dom";
+import { Link, Route, Switch } from "react-router-dom";
 import Web3Modal from "web3modal";
-import "./App.css";
-import { Account, Contract, Faucet, GasGauge, Header, Ramp, ThemeSwitch } from "./components";
-import { INFURA_ID, NETWORK, NETWORKS } from "./constants";
+import { Account, Contract, Faucet, GasGauge, Header, Ramp, ArtGen } from "./components";
+import { INFURA_ID, NETWORK, NETWORKS, PINYOTTAS_API_URL } from "./constants";
 import { Transactor } from "./helpers";
 import {
   useBalance,
   useContractLoader,
   useContractReader,
+  useEventListener,
+  useExchangePrice,
   useGasPrice,
   useOnBlock,
-  useUserProviderAndSigner,
-} from "eth-hooks";
-import { useEventListener } from "eth-hooks/events/useEventListener";
-import { useExchangeEthPrice } from "eth-hooks/dapps/dex";
-// import Hints from "./Hints";
-import { ExampleUI, Hints, Subgraph } from "./views";
-
-import { useContractConfig } from "./hooks";
+  useUserSigner,
+} from "./hooks";
+import {
+  PinyottaPage,
+  Gallery,
+  Home,
+  FAQ,
+  ArtGenMonitor,
+  ArtGenScanner,
+} from "./views";
 import Portis from "@portis/web3";
 import Fortmatic from "fortmatic";
 import Authereum from "authereum";
+import { TOKENS, EXTERNAL_CONTRACTS } from './utils/tokens';
+import Samples from "./components/Samples";
+
+import "antd/dist/antd.css";
+import "./App.scss";
 
 const { ethers } = require("ethers");
 /*
@@ -49,10 +55,10 @@ const { ethers } = require("ethers");
 */
 
 /// 📡 What chain are your contracts deployed to?
-const targetNetwork = NETWORKS.localhost; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
+const targetNetwork = NETWORKS.rinkeby; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
-const DEBUG = true;
+const DEBUG = false;
 const NETWORKCHECK = true;
 
 // 🛰 providers
@@ -73,7 +79,7 @@ const poktMainnetProvider = navigator.onLine
 const mainnetInfura = navigator.onLine
   ? new ethers.providers.StaticJsonRpcProvider("https://mainnet.infura.io/v3/" + INFURA_ID)
   : null;
-// ( ⚠️ Getting "failed to meet quorum" errors? Check your INFURA_ID
+// ( ⚠️ Getting "failed to meet quorum" errors? Check your INFURA_I )
 
 // 🏠 Your local provider is usually pointed at your local blockchain
 const localProviderUrl = targetNetwork.rpcUrl;
@@ -131,19 +137,6 @@ const web3Modal = new Web3Modal({
         key: "pk_live_5A7C91B2FC585A17", // required
       },
     },
-    // torus: {
-    //   package: Torus,
-    //   options: {
-    //     networkParams: {
-    //       host: "https://localhost:8545", // optional
-    //       chainId: 1337, // optional
-    //       networkId: 1337 // optional
-    //     },
-    //     config: {
-    //       buildEnv: "development" // optional
-    //     },
-    //   },
-    // },
     "custom-walletlink": {
       display: {
         logo: "https://play-lh.googleusercontent.com/PjoJoG27miSglVBXoXrxBSLveV6e3EeBPpNY55aiUUBM9Q1RCETKCOqdOkX2ZydqVf0",
@@ -151,7 +144,7 @@ const web3Modal = new Web3Modal({
         description: "Connect to Coinbase Wallet (not Coinbase App)",
       },
       package: walletLinkProvider,
-      connector: async (provider, _options) => {
+      connector: async (provider, options) => {
         await provider.enable();
         return provider;
       },
@@ -184,13 +177,12 @@ function App(props) {
   };
 
   /* 💵 This hook will get the price of ETH from 🦄 Uniswap: */
-  const price = useExchangeEthPrice(targetNetwork, mainnetProvider);
+  const price = useExchangePrice(targetNetwork, mainnetProvider);
 
   /* 🔥 This hook will get the price of Gas from ⛽️ EtherGasStation */
   const gasPrice = useGasPrice(targetNetwork, "fast");
   // Use your injected provider from 🦊 Metamask or if you don't have it then instantly generate a 🔥 burner wallet.
-  const userProviderAndSigner = useUserProviderAndSigner(injectedProvider, localProvider);
-  const userSigner = userProviderAndSigner.signer;
+  const userSigner = useUserSigner(injectedProvider);
 
   useEffect(() => {
     async function getAddress() {
@@ -221,39 +213,36 @@ function App(props) {
   // Just plug in different 🛰 providers to get your balance on different chains:
   const yourMainnetBalance = useBalance(mainnetProvider, address);
 
-  const contractConfig = useContractConfig();
-
   // Load in your local 📝 contract and read a value from it:
-  const readContracts = useContractLoader(localProvider, contractConfig);
+  const readContracts = useContractLoader(localProvider, {
+    chainId: localChainId,
+    externalContracts: EXTERNAL_CONTRACTS,
+  });
 
   // If you want to make 🔐 write transactions to your contracts, use the userSigner:
-  const writeContracts = useContractLoader(userSigner, contractConfig, localChainId);
+  //const writeContracts = useContractLoader(userSigner, { chainId: localChainId });
+  const writeContracts = useContractLoader(userSigner, {
+    chainId: localChainId,
+    externalContracts: EXTERNAL_CONTRACTS,
+  });
 
   // EXTERNAL CONTRACT EXAMPLE:
   //
   // If you want to bring in the mainnet DAI contract it would look like:
-  const mainnetContracts = useContractLoader(mainnetProvider, contractConfig);
-
-  // If you want to call a function on a new block
-  useOnBlock(mainnetProvider, () => {
-    console.log(`⛓ A new mainnet block is here: ${mainnetProvider._lastBlockNumber}`);
-  });
+  //const mainnetContracts = useContractLoader(mainnetProvider);
 
   // Then read your DAI balance like:
+  /*
   const myMainnetDAIBalance = useContractReader(mainnetContracts, "DAI", "balanceOf", [
     "0x34aA3F359A9D614239015126635CE7732c18fDF3",
   ]);
+  */
 
   // keep track of a variable from the contract in the local React state:
-  const purpose = useContractReader(readContracts, "YourContract", "purpose");
+  //const purpose = useContractReader(readContracts, "YourContract", "purpose");
 
   // 📟 Listen for broadcast events
-  const setPurposeEvents = useEventListener(readContracts, "YourContract", "SetPurpose", localProvider, 1);
-
-  /*
-  const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
-  console.log("🏷 Resolved austingriffith.eth as:",addressFromENS)
-  */
+  //const mintEvents = useEventListener(readContracts, "Pinyottas", "Mint", localProvider, 1);
 
   //
   // 🧫 DEBUG 👨🏻‍🔬
@@ -267,8 +256,8 @@ function App(props) {
       yourLocalBalance &&
       yourMainnetBalance &&
       readContracts &&
-      writeContracts &&
-      mainnetContracts
+      writeContracts //&&
+      //mainnetContracts
     ) {
       console.log("_____________________________________ 🏗 scaffold-eth _____________________________________");
       console.log("🌎 mainnetProvider", mainnetProvider);
@@ -279,7 +268,7 @@ function App(props) {
       console.log("💵 yourMainnetBalance", yourMainnetBalance ? ethers.utils.formatEther(yourMainnetBalance) : "...");
       console.log("📝 readContracts", readContracts);
       console.log("🌍 DAI contract on mainnet:", mainnetContracts);
-      console.log("💵 yourMainnetDAIBalance", myMainnetDAIBalance);
+      //console.log("💵 yourMainnetDAIBalance", myMainnetDAIBalance);
       console.log("🔐 writeContracts", writeContracts);
     }
   }, [
@@ -290,9 +279,10 @@ function App(props) {
     yourMainnetBalance,
     readContracts,
     writeContracts,
-    mainnetContracts,
+    //mainnetContracts,
   ]);
 
+  /*
   let networkDisplay = "";
   if (NETWORKCHECK && localChainId && selectedChainId && localChainId !== selectedChainId) {
     const networkSelected = NETWORK(selectedChainId);
@@ -362,6 +352,7 @@ function App(props) {
                 >
                   <b>{networkLocal && networkLocal.name}</b>
                 </Button>
+                .
               </div>
             }
             type="error"
@@ -377,7 +368,8 @@ function App(props) {
       </div>
     );
   }
-
+  */
+ 
   const loadWeb3Modal = useCallback(async () => {
     const provider = await web3Modal.connect();
     setInjectedProvider(new ethers.providers.Web3Provider(provider));
@@ -410,172 +402,229 @@ function App(props) {
     setRoute(window.location.pathname);
   }, [setRoute]);
 
-  let faucetHint = "";
-  const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
-
-  const [faucetClicked, setFaucetClicked] = useState(false);
-  if (
-    !faucetClicked &&
-    localProvider &&
-    localProvider._network &&
-    localProvider._network.chainId === 31337 &&
-    yourLocalBalance &&
-    ethers.utils.formatEther(yourLocalBalance) <= 0
-  ) {
-    faucetHint = (
-      <div style={{ padding: 16 }}>
-        <Button
-          type="primary"
-          onClick={() => {
-            faucetTx({
-              to: address,
-              value: ethers.utils.parseEther("0.01"),
-            });
-            setFaucetClicked(true);
-          }}
-        >
-          💰 Grab funds from the faucet ⛽️
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="App">
-      {/* ✏️ Edit the header and change the title to your project name */}
       <Header />
-      {networkDisplay}
-      <BrowserRouter>
-        <Menu style={{ textAlign: "center" }} selectedKeys={[route]} mode="horizontal">
+      {/*networkDisplay*/}
+      
+      <div>
+        <Menu style={{ textAlign: "left" }} selectedKeys={[route]} mode="horizontal">
           <Menu.Item key="/">
-            <Link
-              onClick={() => {
-                setRoute("/");
-              }}
-              to="/"
-            >
-              YourContract
-            </Link>
+            <Link onClick={() => setRoute("/")} to="/">Home</Link>
           </Menu.Item>
-          <Menu.Item key="/hints">
-            <Link
-              onClick={() => {
-                setRoute("/hints");
-              }}
-              to="/hints"
-            >
-              Hints
-            </Link>
+          {/*
+          <Menu.Item key="/samples">
+            <Link onClick={() => setRoute("/samples")} to="/samples">Sample Pinyottas</Link>
           </Menu.Item>
-          <Menu.Item key="/exampleui">
-            <Link
-              onClick={() => {
-                setRoute("/exampleui");
-              }}
-              to="/exampleui"
-            >
-              ExampleUI
-            </Link>
+          */}
+          <Menu.Item key="/gallery">
+            <Link onClick={() => setRoute("/gallery")} to="/gallery">Gallery</Link>
           </Menu.Item>
-          <Menu.Item key="/mainnetdai">
-            <Link
-              onClick={() => {
-                setRoute("/mainnetdai");
-              }}
-              to="/mainnetdai"
-            >
-              Mainnet DAI
-            </Link>
-          </Menu.Item>
-          <Menu.Item key="/subgraph">
-            <Link
-              onClick={() => {
-                setRoute("/subgraph");
-              }}
-              to="/subgraph"
-            >
-              Subgraph
-            </Link>
+          <Menu.Item key="/faq">
+            <Link onClick={() => setRoute("/faq")} to="/faq">FAQ</Link>
           </Menu.Item>
         </Menu>
 
         <Switch>
           <Route exact path="/">
-            {/*
-                🎛 this scaffolding is full of commonly used components
-                this <Contract/> component will automatically parse your ABI
-                and give you a form to interact with it locally
-            */}
-
-            <Contract
-              name="YourContract"
-              signer={userSigner}
-              provider={localProvider}
-              address={address}
-              blockExplorer={blockExplorer}
-              contractConfig={contractConfig}
-            />
-          </Route>
-          <Route path="/hints">
-            <Hints
-              address={address}
-              yourLocalBalance={yourLocalBalance}
-              mainnetProvider={mainnetProvider}
-              price={price}
-            />
-          </Route>
-          <Route path="/exampleui">
-            <ExampleUI
-              address={address}
+            <Home
               userSigner={userSigner}
-              mainnetProvider={mainnetProvider}
-              localProvider={localProvider}
-              yourLocalBalance={yourLocalBalance}
-              price={price}
-              tx={tx}
-              writeContracts={writeContracts}
               readContracts={readContracts}
-              purpose={purpose}
-              setPurposeEvents={setPurposeEvents}
-            />
-          </Route>
-          <Route path="/mainnetdai">
-            <Contract
-              name="DAI"
-              customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.DAI}
-              signer={userSigner}
-              provider={mainnetProvider}
-              address={address}
-              blockExplorer="https://etherscan.io/"
-              contractConfig={contractConfig}
-              chainId={1}
-            />
-            {/*
-            <Contract
-              name="UNI"
-              customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.UNI}
-              signer={userSigner}
-              provider={mainnetProvider}
-              address={address}
-              blockExplorer="https://etherscan.io/"
-            />
-            */}
-          </Route>
-          <Route path="/subgraph">
-            <Subgraph
-              subgraphUri={props.subgraphUri}
-              tx={tx}
               writeContracts={writeContracts}
-              mainnetProvider={mainnetProvider}
+              onConnectClick={loadWeb3Modal}
             />
           </Route>
+          <Route path="/samples">
+            <Samples />
+          </Route>
+          <Route path="/faq">
+            <FAQ/>
+          </Route>
+          <Route path="/pinyottas/:pinyottaUrlSlug"
+            render={({ match }) => {
+              return (
+                <PinyottaPage
+                  address={address}
+                  pinyottaId={parseInt(match.params.pinyottaUrlSlug)}
+                  readContracts={readContracts}  
+                  writeContracts={writeContracts}
+                />
+              );
+            }}>
+            
+          </Route>
+
+          {/*
+          <Route path="/adv">
+            <Menu selectedKeys={[route]} mode="horizontal">
+              <Menu.Item key="/adv/gld-token">
+                <Link onClick={() => setRoute("/adv/gld-token")} to="/adv/gld-token">GLDToken</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/slv-token">
+                <Link onClick={() => setRoute("/adv/slv-token")} to="/adv/slv-token">SLVToken</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/brz-token">
+                <Link onClick={() => setRoute("/adv/brz-token")} to="/adv/brz-token">BRZToken</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/pinyottas">
+                <Link onClick={() => setRoute("/adv/pinyottas")} to="/adv/pinyottas">Pinyottas</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/BaseURIMetadataProvider">
+                <Link onClick={() => setRoute("/adv/BaseURIMetadataProvider")} to="/adv/BaseURIMetadataProvider">BaseURIMetadataProvider</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/hints">
+                <Link onClick={() => setRoute("/adv/hints")} to="/adv/hints">Hints</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/exampleui">
+                <Link onClick={() => setRoute("/adv/exampleui")} to="/adv/exampleui">ExampleUI</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/mainnetdai">
+                <Link onClick={() => setRoute("/adv/mainnetdai")} to="/adv/mainnetdai">Mainnet DAI</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/subgraph">
+                <Link onClick={() => setRoute("/adv/subgraph")} to="/adv/subgraph">Subgraph</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/artgen">
+                <Link onClick={() => setRoute("/adv/artgen")} to="/adv/artgen">ArtGen</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/artgen-scanner">
+                <Link onClick={() => setRoute("/adv/artgen-scanner")} to="/adv/artgen-scanner">ArtGen Scanner</Link>
+              </Menu.Item>
+              <Menu.Item key="/adv/gallery">
+                <Link onClick={() => setRoute("/adv/gallery")} to="/adv/gallery">Gallery</Link>
+              </Menu.Item>
+            </Menu>
+          </Route>
+          */}
         </Switch>
-      </BrowserRouter>
+      </div>
 
-      <ThemeSwitch />
+      <Switch>
+        <Route exact path="/adv/gld-token">
+          <Contract
+            name="GLDToken"
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+          />
+        </Route>
+        <Route exact path="/adv/slv-token">
+          <Contract
+            name="SLVToken"
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+          />
+        </Route>
+        <Route exact path="/adv/brz-token">
+          <Contract
+            name="BRZToken"
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+          />
+        </Route>
+        <Route exact path="/adv/pinyottas">
+          <Contract
+            name="Pinyottas"
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+          />
+        </Route>
+        <Route exact path="/adv/BaseURIMetadataProvider">
+          <Contract
+            name="BaseURIMetadataProvider"
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+          />
+        </Route>
+        {/*
+        <Route path="/adv/hints">
+          <Hints
+            address={address}
+            yourLocalBalance={yourLocalBalance}
+            mainnetProvider={mainnetProvider}
+            price={price}
+          />
+        </Route>
+        */}
+        {/*
+        <Route path="/exampleui">
+          <ExampleUI
+            address={address}
+            userSigner={userSigner}
+            mainnetProvider={mainnetProvider}
+            localProvider={localProvider}
+            yourLocalBalance={yourLocalBalance}
+            price={price}
+            tx={tx}
+            writeContracts={writeContracts}
+            readContracts={readContracts}
+            purpose={purpose}
+            setPurposeEvents={setPurposeEvents}
+          />
+        </Route>
+        */}
+        <Route path="/adv/mainnetdai">
+          {/*
+          <Contract
+            name="UNI"
+            customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.UNI}
+            signer={userSigner}
+            provider={mainnetProvider}
+            address={address}
+            blockExplorer="https://etherscan.io/"
+          />
+          */}
+        </Route>
+        {/*
+        <Route path="/adv/subgraph">
+          <Subgraph
+            subgraphUri={props.subgraphUri}
+            tx={tx}
+            writeContracts={writeContracts}
+            mainnetProvider={mainnetProvider}
+          />
+        </Route>
+        */}
+        <Route path="/adv/artgen">
+          <ArtGenMonitor
+            readContracts={readContracts}
+            availableTokens={TOKENS}
+          />
+        </Route>
+        <Route path="/adv/artgen-scanner">
+          {!readContracts &&
+            <div>Connect to web3 to activate the ArtGenScanner</div>
+          }
+          { readContracts &&
+            <ArtGenScanner
+              readContracts={readContracts}
+              availableTokens={TOKENS}
+            />
+          }
+        </Route>
+        <Route path="/gallery">
+          <Gallery readContracts={readContracts} />
+        </Route>
+      </Switch>
 
-      {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
-      <div style={{ position: "fixed", textAlign: "right", right: 0, top: 0, padding: 10 }}>
+      {/* 👨‍💼 Your account is in the top right with a wallet and connect options */}
+      <div style={{
+        position: "fixed",
+        textAlign: "right",
+        right: 0,
+        top: 0,
+        padding: 18,
+        backgroundColor: 'white',
+      }}>
         <Account
           address={address}
           localProvider={localProvider}
@@ -587,47 +636,6 @@ function App(props) {
           logoutOfWeb3Modal={logoutOfWeb3Modal}
           blockExplorer={blockExplorer}
         />
-        {faucetHint}
-      </div>
-
-      {/* 🗺 Extra UI like gas price, eth price, faucet, and support: */}
-      <div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
-        <Row align="middle" gutter={[4, 4]}>
-          <Col span={8}>
-            <Ramp price={price} address={address} networks={NETWORKS} />
-          </Col>
-
-          <Col span={8} style={{ textAlign: "center", opacity: 0.8 }}>
-            <GasGauge gasPrice={gasPrice} />
-          </Col>
-          <Col span={8} style={{ textAlign: "center", opacity: 1 }}>
-            <Button
-              onClick={() => {
-                window.open("https://t.me/joinchat/KByvmRe5wkR-8F_zz6AjpA");
-              }}
-              size="large"
-              shape="round"
-            >
-              <span style={{ marginRight: 8 }} role="img" aria-label="support">
-                💬
-              </span>
-              Support
-            </Button>
-          </Col>
-        </Row>
-
-        <Row align="middle" gutter={[4, 4]}>
-          <Col span={24}>
-            {
-              /*  if the local provider has a signer, let's show the faucet:  */
-              faucetAvailable ? (
-                <Faucet localProvider={localProvider} price={price} ensProvider={mainnetProvider} />
-              ) : (
-                ""
-              )
-            }
-          </Col>
-        </Row>
       </div>
     </div>
   );

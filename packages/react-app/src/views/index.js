@@ -1,3 +1,9 @@
 export { default as ExampleUI } from "./ExampleUI";
 export { default as Hints } from "./Hints";
 export { default as Subgraph } from "./Subgraph";
+export { default as PinyottaPage } from "./PinyottaPage";
+export { default as Gallery } from "./Gallery";
+export { default as Home } from "./Home";
+export { default as FAQ } from "./FAQ";
+export { default as ArtGenMonitor } from "./ArtGenMonitor";
+export { default as ArtGenScanner } from "./ArtGenScanner";

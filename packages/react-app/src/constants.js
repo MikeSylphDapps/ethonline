@@ -1,5 +1,11 @@
+//export const PINYOTTAS_UI_URL = "http://localhost:3000";
+//export const PINYOTTAS_API_URL = "http://localhost:3001";
+
+export const PINYOTTAS_UI_URL = "https://rinkeby.pinyottas.com";
+export const PINYOTTAS_API_URL = "https://api-rinkeby.pinyottas.com";
+
 // MY INFURA_ID, SWAP IN YOURS FROM https://infura.io/dashboard/ethereum
-export const INFURA_ID = "460f40a260564ac4a4f4b3fffb032dad";
+export const INFURA_ID = "786ade30f36244469480aa5c2bf0743b";
 
 // MY ETHERSCAN_ID, SWAP IN YOURS FROM https://etherscan.io/myapikey
 export const ETHERSCAN_KEY = "PSW8C433Q667DVEX5BCRMGNAH9FSGFZ7Q8";

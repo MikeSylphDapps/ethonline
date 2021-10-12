@@ -1,0 +1,40 @@
+.PinyottaPage {
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  
+  .container {
+    width: 500px;
+    text-align: left;
+
+    header {
+      text-align: left;
+      margin-bottom: 1em;
+      h1 {
+        margin-bottom: 0;
+      }
+    }
+    
+    .main-section {
+      display: flex;
+    }
+  
+    .ArtGen {
+      margin-bottom: 1em;
+    }
+
+    .buttons {
+      width: 100%;
+      text-align: center;
+
+      :not(:last-child) {
+        margin-right: 5px;
+      }
+    }
+  }
+}
+
+#recepient-input {
+  width: 100%;
+}
